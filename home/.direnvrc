@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eo pipefail
+
+if [ -f ~/.profile.d/plugins/direnv/direnvrc ]; then
+  \. ~/.profile.d/plugins/direnv/direnvrc
+fi

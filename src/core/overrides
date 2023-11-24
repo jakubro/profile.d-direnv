@@ -1,0 +1,50 @@
+#!/bin/bash
+set -eo pipefail
+
+use() {
+  _dispatch use "$@"
+}
+
+layout() {
+  _dispatch layout "$@"
+}
+
+_dispatch() {
+
+  local command=$1
+  shift
+
+  local handler=$1
+  shift
+
+  # set current command & handler
+
+  local prev_command=$__PROFILE_D_DIRENV_COMMAND__
+  local prev_handler=$__PROFILE_D_DIRENV_HANDLER__
+
+  export __PROFILE_D_DIRENV_COMMAND__=$command
+  export __PROFILE_D_DIRENV_HANDLER__=$handler
+
+  # dispatch
+
+  "${command}_${handler}" "$@"
+
+  # revert previous command & handler
+
+  if [ -n "$prev_command" ]; then
+    export __PROFILE_D_DIRENV_COMMAND__=$prev_command
+  else
+    unset __PROFILE_D_DIRENV_COMMAND__
+  fi
+
+  if [ -n "$prev_handler" ]; then
+    export __PROFILE_D_DIRENV_HANDLER__=$prev_handler
+  else
+    unset __PROFILE_D_DIRENV_HANDLER__
+  fi
+
+}
+
+log_status() {
+  log_info "$@" # see ./log
+}

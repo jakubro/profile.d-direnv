@@ -1,0 +1,45 @@
+#!/bin/bash
+set -eo pipefail
+
+# Usage: use dotenv <file> <overwrite>
+#
+# Examples:
+#   use dotenv .env
+#   use dotenv .env +
+use_dotenv() {
+
+  # Loads environment variables from .env file.
+  # Existing variables are NOT overwritten.
+
+  local file=${1:-.env}
+  local overwrite=${2:--}
+
+  local prev_env
+  prev_env=$(declare -p -x)
+
+  local sources=(
+    "${file}.shared"
+    "${file}"
+  )
+
+  local file
+
+  for file in "${sources[@]}"; do
+
+    if [ -f "$file" ]; then
+
+      set -o allexport
+      \. "$file"
+      set +o allexport
+
+      watch_file "$file"
+
+    fi
+
+  done
+
+  if [ "$overwrite" != "+" ]; then
+    eval "$prev_env"
+  fi
+
+}

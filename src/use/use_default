@@ -1,0 +1,34 @@
+#!/bin/bash
+set -eo pipefail
+
+use_default() {
+
+  local type=${1:-}
+
+  # source
+
+  if [ "$type" != "root" ]; then
+    source_up_if_exists .envrc
+  fi
+
+  source_env_if_exists .envrc.shared
+  source_env_if_exists .envrc.private
+
+  # check
+
+  if [ -f .envrc.template ]; then
+    if ! cmp --silent .envrc .envrc.template; then
+      log_warn ".envrc differs from .envrc.template"
+    fi
+  fi
+
+  # watch
+
+  if [ "$type" = "root" ]; then
+
+    watch_file ~/.direnvrc
+    watch_file ~/.profile.d/plugins/direnv
+
+  fi
+
+}

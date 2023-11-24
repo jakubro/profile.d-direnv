@@ -1,0 +1,41 @@
+#!/bin/bash
+set -eo pipefail
+# depends on 01-colors from jakub-dotfiles
+
+log_error() {
+  _log "$RED" "$@"
+}
+
+log_warn() {
+  _log "$YELLOW" "$@"
+}
+
+log_info() {
+  _log "$GRAY" "$@"
+}
+
+log_debug() {
+  _log "$GRAY" "$@"
+}
+
+_log() {
+
+  local color=$1
+  shift
+
+  local handler
+  if [ -n "$__PROFILE_D_DIRENV_HANDLER__" ]; then
+    handler="[${__PROFILE_D_DIRENV_HANDLER__}] "
+  fi
+
+  local location
+  location=$(user_rel_path "$PWD")
+  location=" (${location})"
+
+  local prefix="${color}${FAINT}${handler}${ENDCOLOR}"
+  local message="${color}${*}${ENDCOLOR}"
+  local suffix="${color}${FAINT}${location}${ENDCOLOR}"
+
+  echo >&2 -e "${prefix}${message}${suffix}"
+
+}

@@ -1,0 +1,142 @@
+#!/bin/bash
+set -eo pipefail
+
+use_node() {
+
+  local version=${1:--} # - to read from .nvmrc
+  local root=${2:--}    # - to use pwd
+
+  if [ "$version" = "-" ]; then
+    version=""
+  fi
+
+  if [ "$root" = "-" ]; then
+    root=""
+  fi
+
+  pushd "$root" >/dev/null
+
+  _activate_nvm
+  _activate_node "$version"
+  _install_node_dependencies
+
+  watch_file package.json
+  watch_file yarn.lock
+  watch_file package-lock.json
+
+  popd >/dev/null
+
+}
+
+_activate_nvm() {
+
+  local nvm_dir=~/.nvm
+  local nvm_sh=$nvm_dir/nvm.sh
+
+  if [ ! -f "$nvm_sh" ]; then
+    log_info "installing nvm"
+    curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+  fi
+
+  if [ -z "$NVM_DIR" ]; then
+    export NVM_DIR=$nvm_dir
+  fi
+
+  \. "$nvm_sh"
+
+}
+
+_activate_node() {
+
+  local version=$1
+
+  set +e
+  nvm which "$version" &>/dev/null
+  local code=$?
+  set -e
+
+  if [ "$code" = 127 ] && [ -z "$version" ]; then
+    log_error "no .nvmrc file found"
+    return 1
+  fi
+
+  if [ "$code" != 0 ]; then
+    _install_node "$version"
+  fi
+
+  nvm use --silent "$version"
+
+}
+
+_install_node() {
+
+  local version=$1
+
+  log_info "installing node.js"
+
+  # check if there's already a default node.js version
+  local default
+  default=$(nvm alias default || true)
+
+  nvm install --latest-npm "$version"
+  npm install --global yarn
+
+  # nvm makes the first installed version the default one
+  if [ -z "$default" ]; then
+    nvm unalias default
+  fi
+
+}
+
+_install_node_dependencies() {
+
+  if [ -f yarn.lock ]; then
+
+    if ! command -v yarn &>/dev/null; then
+      npm install --global yarn
+    fi
+
+    __install_node_dependencies yarn \
+      yarn install \
+      --silent \
+      --non-interactive \
+      --no-progress \
+      --prefer-offline \
+      --pure-lockfile \
+      --no-node-version-check
+
+  elif [ -f package-lock.json ]; then
+
+    __install_node_dependencies npm \
+      npm install \
+      --silent \
+      --no-audit \
+      --no-fund
+
+  elif [ -f package.json ]; then
+
+    if ! command -v yarn &>/dev/null; then
+      npm install --global yarn
+    fi
+
+    __install_node_dependencies yarn \
+      yarn install \
+      --silent \
+      --non-interactive \
+      --no-progress
+
+  fi
+
+}
+
+__install_node_dependencies() {
+
+  local type=$1
+  shift
+
+  log_info "restoring $type dependencies"
+
+  NPM_CONFIG_ENGINE_STRICT=true "$@" ||
+    log_error "failed to restore $type dependencies"
+
+}

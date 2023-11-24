@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ $- == *i* ]]; then
+
+  if command -v direnv &>/dev/null; then
+
+    DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")
+    export DIRENV_LOG_FORMAT
+
+    eval "$(direnv hook bash)"
+
+  fi
+
+fi
