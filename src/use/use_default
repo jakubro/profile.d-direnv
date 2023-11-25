@@ -27,7 +27,7 @@ use_default() {
   if [ "$type" = "root" ]; then
 
     watch_file ~/.direnvrc
-    watch_file ~/.profile.d/plugins/direnv
+    watch_file ~/.profile.d/plugins/profile.d-direnv
 
   fi
 

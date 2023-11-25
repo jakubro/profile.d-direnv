@@ -3,4 +3,4 @@ set -eo pipefail
 
 \. ~/.profile.d/lib/include
 
-__profile_d_load__ ~/.profile.d/plugins/direnv/src
+__profile_d_load__ ~/.profile.d/plugins/profile.d-direnv/src
