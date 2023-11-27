@@ -42,7 +42,7 @@ _use_node() {
 
 _activate_nvm() {
 
-  if command -v nvm &>/dev/null; then
+  if has nvm; then
     return 0
   fi
 
@@ -144,7 +144,7 @@ _install_node_dependencies() {
 
   if [ -f yarn.lock ]; then
 
-    if ! command -v yarn &>/dev/null; then
+    if ! has yarn; then
       _npm_install --global yarn || return 1
     fi
 
@@ -158,7 +158,7 @@ _install_node_dependencies() {
 
   elif [ -f package.json ]; then
 
-    if ! command -v yarn &>/dev/null; then
+    if ! has yarn; then
       _npm_install --global yarn || return 1
     fi
 

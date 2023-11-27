@@ -87,7 +87,7 @@ _activate_pyenv() {
     export PATH=$PYENV_ROOT/bin:$PATH
   fi
 
-  if ! command -v pyenv &>/dev/null; then
+  if ! has pyenv; then
     _install_pyenv || return 1
   fi
 
