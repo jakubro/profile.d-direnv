@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eo pipefail
 
 use_node() {
 
@@ -14,46 +13,92 @@ use_node() {
     root=""
   fi
 
-  pushd "$root" >/dev/null
-
-  _activate_nvm
-  _activate_node "$version"
-  _install_node_dependencies
+  pushd "$root" >/dev/null || return 1
 
   watch_file package.json
   watch_file yarn.lock
   watch_file package-lock.json
 
-  popd >/dev/null
+  _use_node "$version"
+  local code=$?
+
+  popd >/dev/null || return 1
+  return "$code"
 
 }
 
+_use_node() {
+
+  local version=$1
+
+  _activate_nvm || return 1
+  _activate_node "$version" || return 1
+  _install_node_dependencies || return 0
+
+}
+
+# nvm
+# --------------------------------------------------------------------------------------------------
+
 _activate_nvm() {
+
+  if command -v nvm &>/dev/null; then
+    return 0
+  fi
 
   local nvm_dir=~/.nvm
   local nvm_sh=$nvm_dir/nvm.sh
 
   if [ ! -f "$nvm_sh" ]; then
-    log_info "installing nvm"
-    curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+    _install_nvm || return 1
   fi
 
   if [ -z "$NVM_DIR" ]; then
     export NVM_DIR=$nvm_dir
   fi
 
-  \. "$nvm_sh"
+  \. "$nvm_sh" || return 1
 
 }
+
+_install_nvm() {
+
+  log_info "installing nvm"
+  curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash || return 1
+
+}
+
+_upgrade_nvm() {
+
+  log_info "upgrading nvm"
+
+  local root=$NVM_DIR
+
+  (
+
+    cd "$root" || return 1
+
+    # checkout latest version tag
+
+    git fetch --tags origin || return 1
+    hash=$(git rev-list --tags --max-count=1) || return 1
+    version=$(git describe --abbrev=0 --tags --match "v[0-9]*" "$hash") || return 1
+
+    git checkout "$version" || return 1
+
+  )
+
+}
+
+# node
+# --------------------------------------------------------------------------------------------------
 
 _activate_node() {
 
   local version=$1
 
-  set +e
   nvm which "$version" &>/dev/null
   local code=$?
-  set -e
 
   if [ "$code" = 127 ] && [ -z "$version" ]; then
     log_error "no .nvmrc file found"
@@ -61,10 +106,10 @@ _activate_node() {
   fi
 
   if [ "$code" != 0 ]; then
-    _install_node "$version"
+    _install_node "$version" || return 1
   fi
 
-  nvm use --silent "$version"
+  nvm use "$version" >/dev/null || return 1
 
 }
 
@@ -76,67 +121,91 @@ _install_node() {
 
   # check if there's already a default node.js version
   local default
-  default=$(nvm alias default || true)
+  default=$(nvm alias default >/dev/null)
 
-  nvm install --latest-npm "$version"
-  npm install --global yarn
+  nvm install "$version" >/dev/null || return 1
+
+  nvm exec "$version" \
+    npm --silent --no-audit --no-fund \
+    install --global \
+    npm yarn || return 1
 
   # nvm makes the first installed version the default one
   if [ -z "$default" ]; then
-    nvm unalias default
+    nvm unalias default >/dev/null || return 1
   fi
 
 }
+
+# deps
+# --------------------------------------------------------------------------------------------------
 
 _install_node_dependencies() {
 
   if [ -f yarn.lock ]; then
 
     if ! command -v yarn &>/dev/null; then
-      npm install --global yarn
+      _npm_install --global yarn || return 1
     fi
 
-    __install_node_dependencies yarn \
-      yarn install \
-      --silent \
-      --non-interactive \
-      --no-progress \
-      --prefer-offline \
-      --pure-lockfile \
-      --no-node-version-check
+    _handle_install_node_dependencies yarn \
+      _yarn_install --pure-lockfile || return 1
 
   elif [ -f package-lock.json ]; then
 
-    __install_node_dependencies npm \
-      npm install \
-      --silent \
-      --no-audit \
-      --no-fund
+    _handle_install_node_dependencies npm \
+      _npm_install || return 1
 
   elif [ -f package.json ]; then
 
     if ! command -v yarn &>/dev/null; then
-      npm install --global yarn
+      _npm_install --global yarn || return 1
     fi
 
-    __install_node_dependencies yarn \
-      yarn install \
-      --silent \
-      --non-interactive \
-      --no-progress
+    _handle_install_node_dependencies yarn \
+      _yarn_install || return 1
 
   fi
 
 }
 
-__install_node_dependencies() {
+_handle_install_node_dependencies() {
 
   local type=$1
   shift
 
   log_info "restoring $type dependencies"
 
-  NPM_CONFIG_ENGINE_STRICT=true "$@" ||
+  "$@"
+  local code=$?
+
+  if [ "$code" != 0 ]; then
     log_error "failed to restore $type dependencies"
+    return 1
+  fi
+
+}
+
+_npm_install() {
+
+  NPM_CONFIG_ENGINE_STRICT=true \
+    npm install \
+    --silent \
+    --no-audit \
+    --no-fund \
+    "$@" || return 1
+
+}
+
+_yarn_install() {
+
+  NPM_CONFIG_ENGINE_STRICT=true \
+    yarn install \
+    --silent \
+    --non-interactive \
+    --no-progress \
+    --prefer-offline \
+    --no-node-version-check \
+    "$@" || return 1
 
 }

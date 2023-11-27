@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eo pipefail
 
 # Usage: use dotenv <file> <overwrite>
 #
@@ -29,7 +28,7 @@ use_dotenv() {
     if [ -f "$file" ]; then
 
       set -o allexport
-      \. "$file"
+      \. "$file" || return 1
       set +o allexport
 
       watch_file "$file"

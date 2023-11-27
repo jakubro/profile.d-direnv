@@ -1,6 +1,5 @@
 #!/bin/bash
-set -eo pipefail
-# depends on 01-colors from jakub-dotfiles
+# todo: depends on 01-colors from @jakubro/profile.d-jakub-dotfiles
 
 log_error() {
   _log "$RED" "$@"

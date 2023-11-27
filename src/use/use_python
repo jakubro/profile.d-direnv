@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eo pipefail
 
 use_python() {
 
@@ -18,23 +17,35 @@ use_python() {
     root=$PWD
   fi
 
-  pushd "$root" >/dev/null
-
-  version=$(_get_requested_python_version "$version")
-
-  local py
-
-  _activate_pyenv
-  py=$(_activate_python "$version")
-  _activate_venv "$py"
-  _install_python_dependencies
+  pushd "$root" >/dev/null || return 1
 
   watch_file pyproject.toml
   watch_file setup.py
   watch_file setup.cfg
-  watch_file requirements.txt
 
-  popd >/dev/null
+  if [ ! -f pyproject.toml ] && [ ! -f setup.py ] && [ ! -f setup.cfg ]; then
+    watch_file requirements.txt
+  fi
+
+  _use_python "$version"
+  local code=$?
+
+  popd >/dev/null || return 1
+  return "$code"
+
+}
+
+_use_python() {
+
+  local version=$1
+  local py
+
+  version=$(_get_requested_python_version "$version") || return 1
+
+  _activate_pyenv || return 1
+  py=$(_activate_python "$version") || return 1
+  _activate_venv "$py" || return 1
+  _install_python_dependencies || return 0
 
 }
 
@@ -50,7 +61,7 @@ _get_requested_python_version() {
   local rc
 
   if rc=$(find_up .pvmrc); then
-    cat "$rc"
+    cat "$rc" || return 1
     return 0
   fi
 
@@ -64,6 +75,10 @@ _get_requested_python_version() {
 
 _activate_pyenv() {
 
+  if [ "$(type -t pyenv)" = "function" ]; then
+    return 0
+  fi
+
   if [ -z "$PYENV_ROOT" ]; then
     export PYENV_ROOT=~/.pyenv
   fi
@@ -73,17 +88,20 @@ _activate_pyenv() {
   fi
 
   if ! command -v pyenv &>/dev/null; then
-    _install_pyenv
+    _install_pyenv || return 1
   fi
 
-  eval "$(pyenv init -)"
+  local initializer
+  initializer=$(pyenv init -) || return 1
+
+  eval "$initializer" || return 1
 
 }
 
 _install_pyenv() {
 
   log_info "installing pyenv"
-  curl -s https://pyenv.run | bash
+  curl -s https://pyenv.run | bash || return 1
 
 }
 
@@ -92,11 +110,11 @@ _upgrade_pyenv() {
   log_info "upgrading pyenv"
 
   local root
-  root=$(pyenv root)
+  root=$(pyenv root) || return 1
 
   (
-    cd "$root"
-    git pull 1>/dev/null
+    cd "$root" || return 1
+    git pull 1>/dev/null || return 1
   )
 
 }
@@ -112,9 +130,9 @@ _activate_python() {
 
   if ! py=$(_get_python_executable "$version"); then
 
-    _upgrade_pyenv
-    _install_python "$version"
-    py=$(_get_python_executable "$version")
+    _upgrade_pyenv || return 1
+    _install_python "$version" || return 1
+    py=$(_get_python_executable "$version") || return 1
 
   fi
 
@@ -127,7 +145,10 @@ _get_python_executable() {
   local version=$1
 
   local prefix
-  prefix=$(pyenv prefix "$version" 2>/dev/null)
+
+  if ! prefix=$(pyenv prefix "$version" 2>/dev/null); then
+    return 1
+  fi
 
   echo "${prefix}/bin/python"
 
@@ -138,7 +159,15 @@ _install_python() {
   local version=$1
 
   log_info "installing python"
-  pyenv install --skip-existing "$version" 1>/dev/null
+
+  (
+
+    export PYTHON_CONFIGURE_OPTS="--enable-optimizations --with-lto"
+    export PYTHON_CFLAGS="-march=native -mtune=native"
+
+    pyenv install --skip-existing "$version" 1>/dev/null || return 1
+
+  )
 
 }
 
@@ -157,10 +186,7 @@ _activate_venv() {
   local relpath
   relpath=$(user_rel_path "$VIRTUAL_ENV")
 
-  if [ ! -d "$VIRTUAL_ENV" ]; then
-    log_info "creating venv in $relpath"
-    "$py" -m venv "$VIRTUAL_ENV"
-  fi
+  _create_venv "$py" || return 1
 
   PATH=$VIRTUAL_ENV/bin:$PATH
   export PATH
@@ -191,6 +217,23 @@ _activate_venv() {
 
 }
 
+_create_venv() {
+
+  local py=$1
+  local path=${2:-$VIRTUAL_ENV}
+
+  if [ ! -d "$VIRTUAL_ENV" ]; then
+
+    local relpath
+    relpath=$(user_rel_path "$path")
+
+    log_info "creating venv in $path"
+    "$py" -m venv "$path" || return 1
+
+  fi
+
+}
+
 # deps
 # --------------------------------------------------------------------------------------------------
 
@@ -198,34 +241,61 @@ _install_python_dependencies() {
 
   if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
 
-    __install_python_dependencies project \
+    _handle_install_python_dependencies project \
       --editable \
-      ".[dev]"
+      ".[dev]" || return 1
 
   elif [ -f requirements.txt ]; then
 
-    __install_python_dependencies requirements.txt \
-      --requirement requirements.txt
+    _handle_install_python_dependencies requirements.txt \
+      --requirement requirements.txt || return 1
 
   fi
 
 }
 
-__install_python_dependencies() {
+_handle_install_python_dependencies() {
 
   local type=$1
   shift
 
+  local code
+
   log_info "restoring $type dependencies"
+
+  _pip_install "$@"
+  code=$?
+
+  if [ "$code" != 0 ]; then
+    log_error "failed to restore $type dependencies"
+    return 1
+  fi
+
+  _update_requirements
+  code=$?
+
+  if [ "$code" != 0 ]; then
+    log_error "failed to update requirements.txt"
+    return 1
+  fi
+
+}
+
+_pip_install() {
 
   pip install \
     --require-virtualenv \
     --disable-pip-version-check \
     --no-python-version-warning \
     "$@" \
-    1>/dev/null ||
-    log_error "failed to restore $type dependencies"
+    1>/dev/null || return 1
 
-  pip freeze --exclude-editable >requirements.txt
+}
+
+_update_requirements() {
+
+  pip freeze \
+    --exclude-editable \
+    >requirements.txt || return 1
 
 }

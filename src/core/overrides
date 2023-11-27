@@ -1,12 +1,11 @@
 #!/bin/bash
-set -eo pipefail
 
 use() {
-  _dispatch use "$@"
+  _dispatch use "$@" || return 1
 }
 
 layout() {
-  _dispatch layout "$@"
+  _dispatch layout "$@" || return 1
 }
 
 _dispatch() {
@@ -28,6 +27,7 @@ _dispatch() {
   # dispatch
 
   "${command}_${handler}" "$@"
+  local code=$?
 
   # revert previous command & handler
 
@@ -42,6 +42,8 @@ _dispatch() {
   else
     unset __PROFILE_D_DIRENV_HANDLER__
   fi
+
+  return "$code"
 
 }
 
