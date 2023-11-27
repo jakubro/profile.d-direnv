@@ -114,7 +114,7 @@ _upgrade_pyenv() {
 
   (
     cd "$root" || return 1
-    git pull 1>/dev/null || return 1
+    git pull --quiet 1>/dev/null || return 1
   )
 
 }

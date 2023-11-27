@@ -80,11 +80,11 @@ _upgrade_nvm() {
 
     # checkout latest version tag
 
-    git fetch --tags origin || return 1
+    git fetch --quiet --tags origin || return 1
     hash=$(git rev-list --tags --max-count=1) || return 1
     version=$(git describe --abbrev=0 --tags --match "v[0-9]*" "$hash") || return 1
 
-    git checkout "$version" || return 1
+    git checkout --quiet "$version" || return 1
 
   )
 
