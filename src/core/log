@@ -1,20 +1,31 @@
 #!/bin/bash
 # todo: depends on 01-colors from @jakubro/profile.d-jakub-dotfiles
 
+__PROFILE_D_DIRENV_LOG_LEVEL__=${__PROFILE_D_DIRENV_LOG_LEVEL__:-1}
+__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__=${__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__:-$(date +%s%3N)}
+
 log_error() {
-  _log "$RED" "$@"
+  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 3 ]; then
+    _log "$RED" "" "$@"
+  fi
 }
 
 log_warn() {
-  _log "$YELLOW" "$@"
+  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 2 ]; then
+    _log "$YELLOW" "" "$@"
+  fi
 }
 
 log_info() {
-  _log "$GRAY" "$@"
+  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 1 ]; then
+    _log "$GRAY" "" "$@"
+  fi
 }
 
 log_debug() {
-  _log "$GRAY" "$@"
+  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 0 ]; then
+    _log "$GRAY" "$FAINT" "$@"
+  fi
 }
 
 _log() {
@@ -22,19 +33,71 @@ _log() {
   local color=$1
   shift
 
-  local handler
-  if [ -n "$__PROFILE_D_DIRENV_HANDLER__" ]; then
-    handler="[${__PROFILE_D_DIRENV_HANDLER__}] "
+  local message_color=$1
+  shift
+
+  local non_message_color=$FAINT
+
+  local message="${*}"
+
+  local handler=$__PROFILE_D_DIRENV_HANDLER__
+
+  local type="simple"
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 0 ]; then
+    type="table"
+  fi
+
+  local elapsed
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 0 ]; then
+
+    local prev=$__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__
+
+    local next
+    next=$(date +%s%3N)
+
+    __PROFILE_D_DIRENV_DEBUG_TIMESTAMP__=$next
+
+    elapsed="$((next - prev)) ms"
+
   fi
 
   local location
   location=$(user_rel_path "$PWD")
-  location=" (${location})"
 
-  local prefix="${color}${FAINT}${handler}${ENDCOLOR}"
-  local message="${color}${*}${ENDCOLOR}"
-  local suffix="${color}${FAINT}${location}${ENDCOLOR}"
+  # Log row
 
-  echo >&2 -e "${prefix}${message}${suffix}"
+  local separator="${color}${FAINT} | ${ENDCOLOR}"
+
+  if [ "$type" = "simple" ]; then
+
+    if [ "$handler" = "default" ]; then
+      handler=""
+    fi
+
+  elif [ "$type" = "table" ]; then
+
+    handler=$(printf "%-10s" "$handler")
+    elapsed=$(printf "%-10s" "$elapsed")
+    message=$(printf "%-50s" "$message")
+
+    non_message_color=$message_color
+
+  fi
+
+  if [ -n "$handler" ]; then
+    echo >&2 -en "${color}${non_message_color}${handler}${ENDCOLOR}"
+    echo >&2 -en "$separator"
+  fi
+
+  if [ -n "$elapsed" ]; then
+    echo >&2 -en "${color}${non_message_color}${elapsed}${ENDCOLOR}"
+    echo >&2 -en "$separator"
+  fi
+
+  echo >&2 -en "${color}${message_color}${message}${ENDCOLOR}"
+  echo >&2 -en "$separator"
+
+  echo >&2 -en "${color}${non_message_color}${location}${ENDCOLOR}"
+  echo >&2 -e ""
 
 }

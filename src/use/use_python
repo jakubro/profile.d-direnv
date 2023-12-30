@@ -1,21 +1,57 @@
 #!/bin/bash
 
+# Usage: use python [<version>] [--root=<root>] [--upgrade-pip] [--write-requirements]
+#
+# Examples:
+#   use python
+#   use python 3.11.5
+#   use python --root=./src
+#   use python --upgrade-pip
+#   use python --write-requirements
 use_python() {
 
-  local version=${1:--} # - to read from .pvmrc
-  local root=${2:--}    # - to use pwd
+  log_debug "use python $*"
 
-  if [ "$version" = "-" ]; then
-    version=""
+  # parse args
+
+  local root=$PWD
+  local write_requirements=0
+  local upgrade_pip=0
+
+  local args
+  if ! args=$(getopt -o r:pw --long root:,upgrade-pip,write-requirements -- "$@"); then
+    log_warn "invalid options provided: $*"
+  else
+    eval set -- "$args"
+    while true; do
+      case "$1" in
+
+      -r | --root)
+        shift
+        root=$1
+        ;;
+
+      -p | --upgrade-pip)
+        upgrade_pip=1
+        ;;
+
+      -w | --write-requirements)
+        write_requirements=1
+        ;;
+
+      --)
+        shift
+        break
+        ;;
+
+      esac
+      shift
+    done
   fi
 
-  if [ "$root" = "-" ]; then
-    root=""
-  fi
+  local version=${1:-} # defaults to read from .pvmrc
 
-  if [ -z "$root" ]; then
-    root=$PWD
-  fi
+  # handle
 
   pushd "$root" >/dev/null || return 1
 
@@ -23,14 +59,16 @@ use_python() {
   watch_file setup.py
   watch_file setup.cfg
 
-  if [ ! -f pyproject.toml ] && [ ! -f setup.py ] && [ ! -f setup.cfg ]; then
+  if [ ! -f pyproject.toml ] && [ ! -f setup.py ]; then
     watch_file requirements.txt
   fi
 
-  _use_python "$version"
+  _use_python "$version" "$write_requirements" "$upgrade_pip"
   local code=$?
 
   popd >/dev/null || return 1
+
+  log_debug exit
   return "$code"
 
 }
@@ -38,31 +76,43 @@ use_python() {
 _use_python() {
 
   local version=$1
+  local write_requirements=$2
+  local upgrade_pip=$3
   local py
 
   version=$(_get_requested_python_version "$version") || return 1
 
   _activate_pyenv || return 1
   py=$(_activate_python "$version") || return 1
-  _activate_venv "$py" || return 1
-  _install_python_dependencies || return 0
+  _activate_venv "$py" "$upgrade_pip" || return 1
+  _install_python_dependencies "$write_requirements" || return 0
 
 }
 
 _get_requested_python_version() {
 
+  log_debug "getting requested python version"
+
   local version=${1:-}
 
   if [ -n "$version" ]; then
+
+    log_debug "got requested python version"
+
     echo "$version"
     return 0
+
   fi
 
   local rc
 
   if rc=$(find_up .pvmrc); then
+
+    log_debug "got requested python version"
+
     cat "$rc" || return 1
     return 0
+
   fi
 
   log_error "no .pvmrc file found"
@@ -75,7 +125,10 @@ _get_requested_python_version() {
 
 _activate_pyenv() {
 
+  log_debug "activating pyenv"
+
   if [ "$(type -t pyenv)" = "function" ]; then
+    log_debug "activated pyenv"
     return 0
   fi
 
@@ -96,12 +149,17 @@ _activate_pyenv() {
 
   eval "$initializer" || return 1
 
+  log_debug "activated pyenv"
+
 }
 
 _install_pyenv() {
 
   log_info "installing pyenv"
+
   curl -s https://pyenv.run | bash || return 1
+
+  log_debug "installed pyenv"
 
 }
 
@@ -114,8 +172,10 @@ _upgrade_pyenv() {
 
   (
     cd "$root" || return 1
-    git pull --quiet 1>/dev/null || return 1
+    git pull --quiet >/dev/null || return 1
   )
+
+  log_debug "upgraded pyenv"
 
 }
 
@@ -125,6 +185,8 @@ _upgrade_pyenv() {
 _activate_python() {
 
   local version=$1
+
+  log_debug "activating python $1"
 
   local py
 
@@ -136,11 +198,14 @@ _activate_python() {
 
   fi
 
+  log_debug "activated python $1"
   echo "$py"
 
 }
 
 _get_python_executable() {
+
+  log_debug "getting python executable"
 
   local version=$1
 
@@ -150,6 +215,7 @@ _get_python_executable() {
     return 1
   fi
 
+  log_debug "got python executable"
   echo "${prefix}/bin/python"
 
 }
@@ -165,9 +231,11 @@ _install_python() {
     export PYTHON_CONFIGURE_OPTS="--enable-optimizations --with-lto"
     export PYTHON_CFLAGS="-march=native -mtune=native"
 
-    pyenv install --skip-existing "$version" 1>/dev/null || return 1
+    pyenv install --skip-existing "$version" >/dev/null || return 1
 
-  )
+  ) || return 1
+
+  log_info "installed python"
 
 }
 
@@ -177,6 +245,9 @@ _install_python() {
 _activate_venv() {
 
   local py=$1
+  local upgrade_pip=$2
+
+  log_debug "activating venv"
 
   # activate
 
@@ -191,7 +262,11 @@ _activate_venv() {
   PATH=$VIRTUAL_ENV/bin:$PATH
   export PATH
 
+  log_debug "activated venv"
+
   # verify
+
+  log_debug "verifying venv"
 
   local actual_version
   actual_version=$(python -V)
@@ -205,15 +280,23 @@ _activate_venv() {
       "but existing virtual environment provides ${actual_version}"
   fi
 
+  log_debug "verified venv"
+
   # upgrade pip
 
-  pip install \
-    --require-virtualenv \
-    --no-python-version-warning \
-    --upgrade \
-    pip \
-    1>/dev/null ||
-    log_error "failed to upgrade pip in $relpath"
+  if [ "$upgrade_pip" = 1 ]; then
+
+    log_debug "upgrading pip"
+
+    _pip_install \
+      --upgrade \
+      pip \
+      >/dev/null ||
+      log_error "failed to upgrade pip in $relpath"
+
+    log_debug "upgraded pip"
+
+  fi
 
 }
 
@@ -224,11 +307,15 @@ _create_venv() {
 
   if [ ! -d "$VIRTUAL_ENV" ]; then
 
+    log_debug "creating venv"
+
     local relpath
     relpath=$(user_rel_path "$path")
 
     log_info "creating venv in $path"
     "$py" -m venv "$path" || return 1
+
+    log_debug "created venv"
 
   fi
 
@@ -239,16 +326,31 @@ _create_venv() {
 
 _install_python_dependencies() {
 
-  if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
+  local write_requirements=$1
+
+  if [ -f requirements.txt ]; then
+
+    local actual
+    local expected
+
+    actual=$(_pip_freeze | _normalize_python_dependencies)
+    expected=$(_normalize_python_dependencies <requirements.txt)
+
+    if [ "$actual" != "$expected" ]; then
+      _handle_install_python_dependencies requirements.txt \
+        --requirement requirements.txt ||
+        return 1
+    fi
+
+  elif [ -f pyproject.toml ] || [ -f setup.py ]; then
 
     _handle_install_python_dependencies project \
-      --editable \
-      ".[dev]" || return 1
+      --editable ".[dev]" ||
+      return 1
 
-  elif [ -f requirements.txt ]; then
-
-    _handle_install_python_dependencies requirements.txt \
-      --requirement requirements.txt || return 1
+    if [ "$write_requirements" = 1 ]; then
+      _handle_write_python_dependencies || return 1
+    fi
 
   fi
 
@@ -259,43 +361,70 @@ _handle_install_python_dependencies() {
   local type=$1
   shift
 
-  local code
-
   log_info "restoring $type dependencies"
 
   _pip_install "$@"
-  code=$?
+  local code=$?
 
   if [ "$code" != 0 ]; then
     log_error "failed to restore $type dependencies"
     return 1
   fi
 
-  _update_requirements
-  code=$?
+  log_debug "restored $type dependencies"
+
+}
+
+_handle_write_python_dependencies() {
+
+  log_debug "updating requirements.txt"
+
+  _pip_freeze >requirements.txt
+  local code=$?
 
   if [ "$code" != 0 ]; then
     log_error "failed to update requirements.txt"
     return 1
   fi
 
+  log_debug "updated requirements.txt"
+
 }
 
 _pip_install() {
+
+  log_debug "pip install: enter"
 
   pip install \
     --require-virtualenv \
     --disable-pip-version-check \
     --no-python-version-warning \
+    --no-input \
     "$@" \
-    1>/dev/null || return 1
+    >/dev/null
+
+  log_debug "pip install: exit"
 
 }
 
-_update_requirements() {
+_pip_freeze() {
+
+  log_debug "pip freeze: enter"
 
   pip freeze \
+    --require-virtualenv \
+    --disable-pip-version-check \
+    --no-python-version-warning \
+    --no-input \
     --exclude-editable \
-    >requirements.txt || return 1
+    --local
+
+  log_debug "pip freeze: exit"
+
+}
+
+_normalize_python_dependencies() {
+
+  cat | tr "[:upper:]" "[:lower:]" | sort -s
 
 }

@@ -1,17 +1,45 @@
 #!/bin/bash
 
+# Usage: use node [<version>] [--root=<root>]
+#
+# Examples:
+#   use node
+#   use node 18
+#   use node --root=./src
 use_node() {
 
-  local version=${1:--} # - to read from .nvmrc
-  local root=${2:--}    # - to use pwd
+  log_debug "use node $*"
 
-  if [ "$version" = "-" ]; then
-    version=""
+  # parse args
+
+  local root=$PWD
+
+  local args
+  if ! args=$(getopt -o r: --long root: -- "$@"); then
+    log_warn "invalid options provided: $*"
+  else
+    eval set -- "$args"
+    while true; do
+      case "$1" in
+
+      -r | --root)
+        shift
+        root=$1
+        ;;
+
+      --)
+        shift
+        break
+        ;;
+
+      esac
+      shift
+    done
   fi
 
-  if [ "$root" = "-" ]; then
-    root=""
-  fi
+  local version=${1:-} # defaults to read from .nvmrc
+
+  # handle
 
   pushd "$root" >/dev/null || return 1
 
@@ -23,6 +51,8 @@ use_node() {
   local code=$?
 
   popd >/dev/null || return 1
+
+  log_debug exit
   return "$code"
 
 }
@@ -42,6 +72,8 @@ _use_node() {
 
 _activate_nvm() {
 
+  log_debug "activating nvm"
+
   if has nvm; then
     return 0
   fi
@@ -59,12 +91,17 @@ _activate_nvm() {
 
   \. "$nvm_sh" || return 1
 
+  log_debug "activated nvm"
+
 }
 
 _install_nvm() {
 
   log_info "installing nvm"
+
   curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash || return 1
+
+  log_debug "installed nvm"
 
 }
 
@@ -86,7 +123,9 @@ _upgrade_nvm() {
 
     git checkout --quiet "$version" || return 1
 
-  )
+  ) || return 1
+
+  log_debug "upgraded nvm"
 
 }
 
@@ -97,19 +136,23 @@ _activate_node() {
 
   local version=$1
 
-  nvm which "$version" &>/dev/null
+  log_debug "activating node.js"
+
+  nvm use --silent "$version" >/dev/null
   local code=$?
 
-  if [ "$code" = 127 ] && [ -z "$version" ]; then
-    log_error "no .nvmrc file found"
-    return 1
-  fi
+  if [ "$code" = 3 ]; then
 
-  if [ "$code" != 0 ]; then
     _install_node "$version" || return 1
+
+  elif [ "$code" != 0 ]; then
+
+    log_error "failed to activate node.js"
+    return 1
+
   fi
 
-  nvm use "$version" >/dev/null || return 1
+  log_debug "activated node.js"
 
 }
 
@@ -128,12 +171,15 @@ _install_node() {
   nvm exec "$version" \
     npm --silent --no-audit --no-fund \
     install --global \
-    npm yarn || return 1
+    npm yarn ||
+    return 1
 
   # nvm makes the first installed version the default one
   if [ -z "$default" ]; then
     nvm unalias default >/dev/null || return 1
   fi
+
+  log_debug "installed node.js"
 
 }
 
@@ -149,7 +195,8 @@ _install_node_dependencies() {
     fi
 
     _handle_install_node_dependencies yarn \
-      _yarn_install --pure-lockfile || return 1
+      _yarn_install --pure-lockfile ||
+      return 1
 
   elif [ -f package-lock.json ]; then
 
@@ -163,7 +210,8 @@ _install_node_dependencies() {
     fi
 
     _handle_install_node_dependencies yarn \
-      _yarn_install || return 1
+      _yarn_install ||
+      return 1
 
   fi
 
@@ -184,6 +232,8 @@ _handle_install_node_dependencies() {
     return 1
   fi
 
+  log_debug "restored $type dependencies"
+
 }
 
 _npm_install() {
@@ -193,7 +243,9 @@ _npm_install() {
     --silent \
     --no-audit \
     --no-fund \
-    "$@" || return 1
+    "$@" \
+    >/dev/null ||
+    return 1
 
 }
 
@@ -206,6 +258,9 @@ _yarn_install() {
     --no-progress \
     --prefer-offline \
     --no-node-version-check \
-    "$@" || return 1
+    --pure-lockfile \
+    "$@" \
+    >/dev/null ||
+    return 1
 
 }

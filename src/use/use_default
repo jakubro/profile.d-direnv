@@ -1,6 +1,13 @@
 #!/bin/bash
 
+# Usage: use default [root]
+#
+# Examples:
+#   use default
+#   use default root
 use_default() {
+
+  log_debug "use default $*"
 
   local type=${1:-}
 
@@ -29,5 +36,7 @@ use_default() {
     watch_file ~/.profile.d/plugins/profile.d-direnv
 
   fi
+
+  log_debug exit
 
 }

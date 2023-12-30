@@ -1,17 +1,43 @@
 #!/bin/bash
 
-# Usage: use dotenv <file> <overwrite>
+# Usage: use dotenv <file> [--overwrite]
 #
 # Examples:
 #   use dotenv .env
-#   use dotenv .env +
+#   use dotenv .env --overwrite
 use_dotenv() {
 
-  # Loads environment variables from .env file.
-  # Existing variables are NOT overwritten.
+  log_debug "use dotenv $*"
+
+  # parse args
+
+  local overwrite=0
+
+  local args
+  if ! args=$(getopt -o o --long overwrite -- "$@"); then
+    log_warn "invalid options provided: $*"
+  else
+    eval set -- "$args"
+    while true; do
+      case "$1" in
+
+      -o | --overwrite)
+        overwrite=1
+        ;;
+
+      --)
+        shift
+        break
+        ;;
+
+      esac
+      shift
+    done
+  fi
 
   local file=${1:-.env}
-  local overwrite=${2:--}
+
+  # handle
 
   local prev_env
   prev_env=$(declare -p -x)
@@ -37,8 +63,10 @@ use_dotenv() {
 
   done
 
-  if [ "$overwrite" != "+" ]; then
+  if [ "$overwrite" = 1 ]; then
     eval "$prev_env"
   fi
+
+  log_debug exit
 
 }
