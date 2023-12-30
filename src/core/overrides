@@ -1,14 +1,18 @@
 #!/bin/bash
 
+log_status() {
+  log_info "$@" # see ./log
+}
+
 use() {
-  _dispatch use "$@" || return 1
+  __overrides__dispatch__ use "$@" || return 1
 }
 
 layout() {
-  _dispatch layout "$@" || return 1
+  __overrides__dispatch__ layout "$@" || return 1
 }
 
-_dispatch() {
+__overrides__dispatch__() {
 
   local command=$1
   shift
@@ -45,8 +49,4 @@ _dispatch() {
 
   return "$code"
 
-}
-
-log_status() {
-  log_info "$@" # see ./log
 }

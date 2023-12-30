@@ -6,29 +6,29 @@ __PROFILE_D_DIRENV_DEBUG_TIMESTAMP__=${__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__:-$(d
 
 log_error() {
   if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 3 ]; then
-    _log "$RED" "" "$@"
+    __log__ "$RED" "" "$@"
   fi
 }
 
 log_warn() {
   if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 2 ]; then
-    _log "$YELLOW" "" "$@"
+    __log__ "$YELLOW" "" "$@"
   fi
 }
 
 log_info() {
   if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 1 ]; then
-    _log "$GRAY" "" "$@"
+    __log__ "$GRAY" "" "$@"
   fi
 }
 
 log_debug() {
   if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 0 ]; then
-    _log "$GRAY" "$FAINT" "$@"
+    __log__ "$GRAY" "$FAINT" "$@"
   fi
 }
 
-_log() {
+__log__() {
 
   local color=$1
   shift

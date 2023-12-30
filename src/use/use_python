@@ -63,7 +63,7 @@ use_python() {
     watch_file requirements.txt
   fi
 
-  _use_python "$version" "$write_requirements" "$upgrade_pip"
+  __python__use_python__ "$version" "$write_requirements" "$upgrade_pip"
   local code=$?
 
   popd >/dev/null || return 1
@@ -73,23 +73,23 @@ use_python() {
 
 }
 
-_use_python() {
+__python__use_python__() {
 
   local version=$1
   local write_requirements=$2
   local upgrade_pip=$3
   local py
 
-  version=$(_get_requested_python_version "$version") || return 1
+  version=$(__python__get_requested_python_version__ "$version") || return 1
 
-  _activate_pyenv || return 1
-  py=$(_activate_python "$version") || return 1
-  _activate_venv "$py" "$upgrade_pip" || return 1
-  _install_python_dependencies "$write_requirements" || return 0
+  __python__activate_pyenv__ || return 1
+  py=$(__python__activate_python__ "$version") || return 1
+  __python__activate_venv__ "$py" "$upgrade_pip" || return 1
+  __python__install_dependencies__ "$write_requirements" || return 0
 
 }
 
-_get_requested_python_version() {
+__python__get_requested_python_version__() {
 
   log_debug "getting requested python version"
 
@@ -123,7 +123,7 @@ _get_requested_python_version() {
 # pyenv
 # --------------------------------------------------------------------------------------------------
 
-_activate_pyenv() {
+__python__activate_pyenv__() {
 
   log_debug "activating pyenv"
 
@@ -141,7 +141,7 @@ _activate_pyenv() {
   fi
 
   if ! has pyenv; then
-    _install_pyenv || return 1
+    __python__install_pyenv__ || return 1
   fi
 
   local initializer
@@ -153,7 +153,7 @@ _activate_pyenv() {
 
 }
 
-_install_pyenv() {
+__python__install_pyenv__() {
 
   log_info "installing pyenv"
 
@@ -163,7 +163,7 @@ _install_pyenv() {
 
 }
 
-_upgrade_pyenv() {
+__python__upgrade_pyenv__() {
 
   log_info "upgrading pyenv"
 
@@ -182,7 +182,7 @@ _upgrade_pyenv() {
 # python
 # --------------------------------------------------------------------------------------------------
 
-_activate_python() {
+__python__activate_python__() {
 
   local version=$1
 
@@ -190,11 +190,11 @@ _activate_python() {
 
   local py
 
-  if ! py=$(_get_python_executable "$version"); then
+  if ! py=$(__python__get_python_executable__ "$version"); then
 
-    _upgrade_pyenv || return 1
-    _install_python "$version" || return 1
-    py=$(_get_python_executable "$version") || return 1
+    __python__upgrade_pyenv__ || return 1
+    __python__install_python__ "$version" || return 1
+    py=$(__python__get_python_executable__ "$version") || return 1
 
   fi
 
@@ -203,7 +203,7 @@ _activate_python() {
 
 }
 
-_get_python_executable() {
+__python__get_python_executable__() {
 
   log_debug "getting python executable"
 
@@ -220,7 +220,7 @@ _get_python_executable() {
 
 }
 
-_install_python() {
+__python__install_python__() {
 
   local version=$1
 
@@ -242,7 +242,7 @@ _install_python() {
 # venv
 # --------------------------------------------------------------------------------------------------
 
-_activate_venv() {
+__python__activate_venv__() {
 
   local py=$1
   local upgrade_pip=$2
@@ -257,7 +257,7 @@ _activate_venv() {
   local relpath
   relpath=$(user_rel_path "$VIRTUAL_ENV")
 
-  _create_venv "$py" || return 1
+  __python__create_venv__ "$py" || return 1
 
   PATH=$VIRTUAL_ENV/bin:$PATH
   export PATH
@@ -288,7 +288,7 @@ _activate_venv() {
 
     log_debug "upgrading pip"
 
-    _pip_install \
+    __python__pip_install__ \
       --upgrade \
       pip \
       >/dev/null ||
@@ -300,7 +300,7 @@ _activate_venv() {
 
 }
 
-_create_venv() {
+__python__create_venv__() {
 
   local py=$1
   local path=${2:-$VIRTUAL_ENV}
@@ -324,7 +324,7 @@ _create_venv() {
 # deps
 # --------------------------------------------------------------------------------------------------
 
-_install_python_dependencies() {
+__python__install_dependencies__() {
 
   local write_requirements=$1
 
@@ -333,37 +333,37 @@ _install_python_dependencies() {
     local actual
     local expected
 
-    actual=$(_pip_freeze | _normalize_python_dependencies)
-    expected=$(_normalize_python_dependencies <requirements.txt)
+    actual=$(__python__pip_freeze__ | __python__normalize_dependencies__)
+    expected=$(__python__normalize_dependencies__ <requirements.txt)
 
     if [ "$actual" != "$expected" ]; then
-      _handle_install_python_dependencies requirements.txt \
+      __python__handle_install_dependencies__ requirements.txt \
         --requirement requirements.txt ||
         return 1
     fi
 
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
 
-    _handle_install_python_dependencies project \
+    __python__handle_install_dependencies__ project \
       --editable ".[dev]" ||
       return 1
 
     if [ "$write_requirements" = 1 ]; then
-      _handle_write_python_dependencies || return 1
+      __python__handle_write_dependencies__ || return 1
     fi
 
   fi
 
 }
 
-_handle_install_python_dependencies() {
+__python__handle_install_dependencies__() {
 
   local type=$1
   shift
 
   log_info "restoring $type dependencies"
 
-  _pip_install "$@"
+  __python__pip_install__ "$@"
   local code=$?
 
   if [ "$code" != 0 ]; then
@@ -375,11 +375,11 @@ _handle_install_python_dependencies() {
 
 }
 
-_handle_write_python_dependencies() {
+__python__handle_write_dependencies__() {
 
   log_debug "updating requirements.txt"
 
-  _pip_freeze >requirements.txt
+  __python__pip_freeze__ >requirements.txt
   local code=$?
 
   if [ "$code" != 0 ]; then
@@ -391,7 +391,7 @@ _handle_write_python_dependencies() {
 
 }
 
-_pip_install() {
+__python__pip_install__() {
 
   log_debug "pip install: enter"
 
@@ -407,7 +407,7 @@ _pip_install() {
 
 }
 
-_pip_freeze() {
+__python__pip_freeze__() {
 
   log_debug "pip freeze: enter"
 
@@ -423,7 +423,7 @@ _pip_freeze() {
 
 }
 
-_normalize_python_dependencies() {
+__python__normalize_dependencies__() {
 
   cat | tr "[:upper:]" "[:lower:]" | sort -s
 
