@@ -1,5 +1,0 @@
-#!/bin/bash
-
-\. ~/.profile.d/lib/include
-
-__profile_d_load__ ~/.profile.d/plugins/profile.d-direnv/src

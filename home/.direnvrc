@@ -1,5 +1,8 @@
 #!/bin/bash
 
-if [ -f ~/.profile.d/plugins/profile.d-direnv/direnvrc ]; then
-  \. ~/.profile.d/plugins/profile.d-direnv/direnvrc
+if [ -d ~/.profile.d ]; then
+
+  \. ~/.profile.d/lib/include
+  __profile_d_load__ ~/.profile.d/plugins/profile.d-direnv/src
+
 fi
