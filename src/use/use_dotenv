@@ -21,14 +21,14 @@ use_dotenv() {
     while true; do
       case "$1" in
 
-      -o | --overwrite)
-        overwrite=1
-        ;;
+        -o | --overwrite)
+          overwrite=1
+          ;;
 
-      --)
-        shift
-        break
-        ;;
+        --)
+          shift
+          break
+          ;;
 
       esac
       shift

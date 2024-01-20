@@ -26,23 +26,23 @@ use_python() {
     while true; do
       case "$1" in
 
-      -r | --root)
-        shift
-        root=$1
-        ;;
+        -r | --root)
+          shift
+          root=$1
+          ;;
 
-      -p | --upgrade-pip)
-        upgrade_pip=1
-        ;;
+        -p | --upgrade-pip)
+          upgrade_pip=1
+          ;;
 
-      -w | --write-requirements)
-        write_requirements=1
-        ;;
+        -w | --write-requirements)
+          write_requirements=1
+          ;;
 
-      --)
-        shift
-        break
-        ;;
+        --)
+          shift
+          break
+          ;;
 
       esac
       shift
@@ -291,8 +291,8 @@ __python__activate_venv__() {
     __python__pip_install__ \
       --upgrade \
       pip \
-      >/dev/null ||
-      log_error "failed to upgrade pip in $relpath"
+      >/dev/null \
+      || log_error "failed to upgrade pip in $relpath"
 
     log_debug "upgraded pip"
 
@@ -338,15 +338,15 @@ __python__install_dependencies__() {
 
     if [ "$actual" != "$expected" ]; then
       __python__handle_install_dependencies__ requirements.txt \
-        --requirement requirements.txt ||
-        return 1
+        --requirement requirements.txt \
+        || return 1
     fi
 
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
 
     __python__handle_install_dependencies__ project \
-      --editable ".[dev]" ||
-      return 1
+      --editable ".[dev]" \
+      || return 1
 
     if [ "$write_requirements" = 1 ]; then
       __python__handle_write_dependencies__ || return 1

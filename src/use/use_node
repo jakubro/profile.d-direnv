@@ -22,15 +22,15 @@ use_node() {
     while true; do
       case "$1" in
 
-      -r | --root)
-        shift
-        root=$1
-        ;;
+        -r | --root)
+          shift
+          root=$1
+          ;;
 
-      --)
-        shift
-        break
-        ;;
+        --)
+          shift
+          break
+          ;;
 
       esac
       shift
@@ -171,8 +171,8 @@ __node__install_node__() {
   nvm exec "$version" \
     npm --silent --no-audit --no-fund \
     install --global \
-    npm yarn ||
-    return 1
+    npm yarn \
+    || return 1
 
   # nvm makes the first installed version the default one
   if [ -z "$default" ]; then
@@ -195,8 +195,8 @@ __node__install_dependencies__() {
     fi
 
     __node__handle_install_dependencies__ yarn \
-      __node__yarn_install__ --pure-lockfile ||
-      return 1
+      __node__yarn_install__ --pure-lockfile \
+      || return 1
 
   elif [ -f package-lock.json ]; then
 
@@ -210,8 +210,8 @@ __node__install_dependencies__() {
     fi
 
     __node__handle_install_dependencies__ yarn \
-      __node__yarn_install__ ||
-      return 1
+      __node__yarn_install__ \
+      || return 1
 
   fi
 
@@ -244,8 +244,8 @@ __node__npm_install__() {
     --no-audit \
     --no-fund \
     "$@" \
-    >/dev/null ||
-    return 1
+    >/dev/null \
+    || return 1
 
 }
 
@@ -260,7 +260,7 @@ __node__yarn_install__() {
     --no-node-version-check \
     --pure-lockfile \
     "$@" \
-    >/dev/null ||
-    return 1
+    >/dev/null \
+    || return 1
 
 }
