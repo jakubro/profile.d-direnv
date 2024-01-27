@@ -17,7 +17,6 @@ use_default() {
     source_up_if_exists .envrc
   fi
 
-  source_env_if_exists .envrc.shared
   source_env_if_exists .envrc.private
 
   # check
