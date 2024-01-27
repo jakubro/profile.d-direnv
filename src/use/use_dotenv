@@ -42,26 +42,15 @@ use_dotenv() {
   local prev_env
   prev_env=$(declare -p -x)
 
-  local sources=(
-    "${file}.shared"
-    "${file}"
-  )
+  if [ -f "$file" ]; then
 
-  local file
+    set -o allexport
+    \. "$file" || return 1
+    set +o allexport
 
-  for file in "${sources[@]}"; do
+    watch_file "$file"
 
-    if [ -f "$file" ]; then
-
-      set -o allexport
-      \. "$file" || return 1
-      set +o allexport
-
-      watch_file "$file"
-
-    fi
-
-  done
+  fi
 
   if [ "$overwrite" = 1 ]; then
     eval "$prev_env"
