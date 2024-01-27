@@ -1,25 +1,32 @@
 #!/bin/bash
 
-# Usage: use dotenv <file> [--overwrite]
+# Usage: use dotenv [<file>] [--root=<root>] [--overwrite]
 #
 # Examples:
 #   use dotenv .env
-#   use dotenv .env --overwrite
+#   use dotenv --root=./src
+#   use dotenv --overwrite
 use_dotenv() {
 
   log_debug "use dotenv $*"
 
   # parse args
 
+  local root=$PWD
   local overwrite=0
 
   local args
-  if ! args=$(getopt -o o --long overwrite -- "$@"); then
+  if ! args=$(getopt -o r:,o --long root:,overwrite -- "$@"); then
     log_warn "invalid options provided: $*"
   else
     eval set -- "$args"
     while true; do
       case "$1" in
+
+        -r | --root)
+          shift
+          root=$1
+          ;;
 
         -o | --overwrite)
           overwrite=1
@@ -42,7 +49,11 @@ use_dotenv() {
   local prev_env
   prev_env=$(declare -p -x)
 
+  pushd "$root" >/dev/null || return 1
+
   if [ -f "$file" ]; then
+
+    log_debug "loading ${root}${file}"
 
     set -o allexport
     \. "$file" || return 1
@@ -52,8 +63,10 @@ use_dotenv() {
 
   fi
 
+  popd >/dev/null || return 1
+
   if [ "$overwrite" = 0 ]; then
-    eval "$prev_env"
+    eval "$prev_env" || return 1
   fi
 
   log_debug exit
