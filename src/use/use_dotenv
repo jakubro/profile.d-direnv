@@ -52,7 +52,7 @@ use_dotenv() {
 
   fi
 
-  if [ "$overwrite" = 1 ]; then
+  if [ "$overwrite" = 0 ]; then
     eval "$prev_env"
   fi
 
