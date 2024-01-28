@@ -53,7 +53,7 @@ use_dotenv() {
 
   if [ -f "$file" ]; then
 
-    log_debug "loading ${root}${file}"
+    log_debug "loading ${root}/${file}"
 
     set -o allexport
     \. "$file" || return 1
