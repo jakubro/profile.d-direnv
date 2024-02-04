@@ -47,7 +47,7 @@ use_dotenv() {
   # handle
 
   local prev_env
-  prev_env=$(declare -p -x)
+  prev_env=$(declare -p -x | sed 's/^declare -x/declare -g -x/')
 
   pushd "$root" >/dev/null || return 1
 
