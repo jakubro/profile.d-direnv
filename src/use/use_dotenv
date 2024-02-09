@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Usage: use dotenv [<file>] [--root=<root>] [--overwrite]
+# Usage: use dotenv [<file>] [--root=<root>] [--no-overwrite]
 #
 # Examples:
 #   use dotenv .env
 #   use dotenv --root=./src
-#   use dotenv --overwrite
+#   use dotenv --no-overwrite
 use_dotenv() {
 
   log_debug "use dotenv $*"
@@ -13,10 +13,10 @@ use_dotenv() {
   # parse args
 
   local root=$PWD
-  local overwrite=0
+  local overwrite=1
 
   local args
-  if ! args=$(getopt -o r:,o --long root:,overwrite -- "$@"); then
+  if ! args=$(getopt -o r:,n --long root:,no-overwrite -- "$@"); then
     log_warn "invalid options provided: $*"
   else
     eval set -- "$args"
@@ -28,8 +28,8 @@ use_dotenv() {
           root=$1
           ;;
 
-        -o | --overwrite)
-          overwrite=1
+        -n | --no-overwrite)
+          overwrite=0
           ;;
 
         --)
