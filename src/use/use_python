@@ -328,18 +328,20 @@ __python__install_dependencies__() {
 
   local write_requirements=$1
 
+  local before
+  before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
+
   if [ -f requirements.txt ]; then
 
-    local actual
-    local expected
+    local stored
+    stored=$(__python__normalize_dependencies__ <requirements.txt) || return 1
 
-    actual=$(__python__pip_freeze__ | __python__normalize_dependencies__)
-    expected=$(__python__normalize_dependencies__ <requirements.txt)
+    if [ "$before" != "$stored" ]; then
 
-    if [ "$actual" != "$expected" ]; then
       __python__handle_install_dependencies__ requirements.txt \
         --requirement requirements.txt \
         || return 1
+
     fi
 
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
@@ -348,7 +350,14 @@ __python__install_dependencies__() {
       --editable ".[dev]" \
       || return 1
 
-    if [ "$write_requirements" = 1 ]; then
+  fi
+
+  if [ "$write_requirements" = 1 ]; then
+
+    local after
+    after=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
+
+    if [ "$before" != "$after" ]; then
       __python__handle_write_dependencies__ || return 1
     fi
 
@@ -377,7 +386,7 @@ __python__handle_install_dependencies__() {
 
 __python__handle_write_dependencies__() {
 
-  log_debug "updating requirements.txt"
+  log_info "updating requirements.txt"
 
   __python__pip_freeze__ >requirements.txt
   local code=$?
