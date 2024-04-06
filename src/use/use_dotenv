@@ -51,6 +51,8 @@ use_dotenv() {
 
   pushd "$root" >/dev/null || return 1
 
+  __dotenv__pull_dotenv_vault__
+
   if [ -f "$file" ]; then
 
     log_debug "loading ${root}/${file}"
@@ -70,5 +72,40 @@ use_dotenv() {
   fi
 
   log_debug exit
+
+}
+
+__dotenv__pull_dotenv_vault__() {
+
+  if ! [ -f .env ] && [ -f .env.vault ]; then
+
+    local key
+
+    if [ -n "$DOTENV_KEY" ]; then
+      key=$DOTENV_KEY
+    elif [ -f .env.key ]; then
+      key=$(cat .env.key) || return 1
+    else
+      log_warn "cannot find decryption key"
+    fi
+
+    log_debug "pulling .env.vault into .env"
+
+    if ! has dotenv-vault; then
+
+      npm install \
+        --silent \
+        --no-audit \
+        --no-fund \
+        --global \
+        dotenv-vault@latest \
+        >/dev/null \
+        || return 1
+
+    fi
+
+    DOTENV_KEY=$key dotenv-vault pull --yes >/dev/null || return 1
+
+  fi
 
 }
