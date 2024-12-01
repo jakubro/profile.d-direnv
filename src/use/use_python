@@ -157,7 +157,7 @@ __python__install_pyenv__() {
 
   log_info "installing pyenv"
 
-  curl -s https://pyenv.run | bash || return 1
+  curl -s https://pyenv.run | /bin/bash || return 1
 
   log_debug "installed pyenv"
 
