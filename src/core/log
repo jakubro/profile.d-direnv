@@ -1,6 +1,9 @@
 #!/bin/bash
 # todo: depends on 01-colors from @jakubro/profile.d-jakub-dotfiles
 
+DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")
+export DIRENV_LOG_FORMAT
+
 __PROFILE_D_DIRENV_LOG_LEVEL__=${__PROFILE_D_DIRENV_LOG_LEVEL__:-1}
 __PROFILE_D_DIRENV_DEBUG_TIMESTAMP__=${__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__:-$(date +%s%3N)}
 

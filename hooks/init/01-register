@@ -1,10 +1,11 @@
 #!/bin/bash
 
-if command -v direnv &>/dev/null; then
+export PATH=~/.local/bin:$PATH
 
-  DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")
-  export DIRENV_LOG_FORMAT
+if [[ $- == *i* ]]; then
 
-  eval "$(direnv hook bash)"
+  if command -v direnv &>/dev/null; then
+    eval "$(direnv hook bash)"
+  fi
 
 fi
