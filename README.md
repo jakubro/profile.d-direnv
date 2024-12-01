@@ -31,7 +31,7 @@ PLUGINS=(
 2. Run the installation commands:
 
 ```bash
-profile.d-update
+profile.d-install
 . ~/.bashrc
 ```
 

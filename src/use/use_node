@@ -99,7 +99,7 @@ __node__install_nvm__() {
 
   log_info "installing nvm"
 
-  curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash || return 1
+  curl -s https://raw.githubusercontent.com/nvm-sh/nvm/master/install | bash || return 1
 
   log_debug "installed nvm"
 
