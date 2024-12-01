@@ -117,12 +117,11 @@ The plugin:
 
 ## Requirements
 
-- Git (automatically installed by profile.d if missing)
-- Bash
-- Additional requirements depending on usage:
-    - Node.js features require nvm
-    - Python features require pyenv
-    - AWS features require AWS CLI
+Optional tools based on usage:
+
+- Node.js features require nvm
+- Python features require pyenv
+- AWS features require AWS CLI
 
 ## Contributing
 
