@@ -1,32 +1,32 @@
 #!/bin/bash
 # todo: depends on 01-colors from @jakubro/profile.d-jakub-dotfiles
 
-DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")
+DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")  # gray color
 export DIRENV_LOG_FORMAT
 
 __PROFILE_D_DIRENV_LOG_LEVEL__=${__PROFILE_D_DIRENV_LOG_LEVEL__:-1}
 __PROFILE_D_DIRENV_DEBUG_TIMESTAMP__=${__PROFILE_D_DIRENV_DEBUG_TIMESTAMP__:-$(date +%s%3N)}
 
 log_error() {
-  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 3 ]; then
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 3 ]; then
     __log__ "$RED" "" "$@"
   fi
 }
 
 log_warn() {
-  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 2 ]; then
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 2 ]; then
     __log__ "$YELLOW" "" "$@"
   fi
 }
 
 log_info() {
-  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 1 ]; then
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 1 ]; then
     __log__ "$GRAY" "" "$@"
   fi
 }
 
 log_debug() {
-  if [ "${__PROFILE_D_DIRENV_LOG_LEVEL__}" -le 0 ]; then
+  if [ "$__PROFILE_D_DIRENV_LOG_LEVEL__" -le 0 ]; then
     __log__ "$GRAY" "$FAINT" "$@"
   fi
 }

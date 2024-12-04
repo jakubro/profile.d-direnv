@@ -8,8 +8,6 @@
 #   use dotenv --no-overwrite
 use_dotenv() {
 
-  log_debug "use dotenv $*"
-
   # parse args
 
   local root=$PWD
@@ -70,8 +68,6 @@ use_dotenv() {
   if [ "$overwrite" = 0 ]; then
     eval "$prev_env" || return 1
   fi
-
-  log_debug exit
 
 }
 

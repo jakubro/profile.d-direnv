@@ -30,10 +30,14 @@ __overrides__dispatch__() {
 
   # dispatch
 
+  log_debug enter
+
   "${command}_${handler}" "$@"
   local code=$?
 
-  # revert previous command & handler
+  log_debug exit
+
+  # restore previous command & handler
 
   if [ -n "$prev_command" ]; then
     export __PROFILE_D_DIRENV_COMMAND__=$prev_command

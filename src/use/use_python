@@ -10,8 +10,6 @@
 #   use python --write-requirements
 use_python() {
 
-  log_debug "use python $*"
-
   # parse args
 
   local root=$PWD
@@ -67,8 +65,6 @@ use_python() {
   local code=$?
 
   popd >/dev/null || return 1
-
-  log_debug exit
   return "$code"
 
 }

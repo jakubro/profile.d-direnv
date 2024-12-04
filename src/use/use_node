@@ -8,8 +8,6 @@
 #   use node --root=./src
 use_node() {
 
-  log_debug "use node $*"
-
   # parse args
 
   local root=$PWD
@@ -51,8 +49,6 @@ use_node() {
   local code=$?
 
   popd >/dev/null || return 1
-
-  log_debug exit
   return "$code"
 
 }
