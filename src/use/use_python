@@ -253,7 +253,7 @@ __python__activate_venv__() {
   local relpath
   relpath=$(user_rel_path "$VIRTUAL_ENV")
 
-  __python__create_venv__ "$py" || return 1
+  __python__create_venv__ "$py" "$VIRTUAL_ENV" || return 1
 
   PATH=$VIRTUAL_ENV/bin:$PATH
   export PATH
@@ -299,9 +299,9 @@ __python__activate_venv__() {
 __python__create_venv__() {
 
   local py=$1
-  local path=${2:-$VIRTUAL_ENV}
+  local path=$2
 
-  if [ ! -d "$VIRTUAL_ENV" ]; then
+  if [ ! -d "$path" ]; then
 
     log_debug "creating venv"
 
@@ -310,6 +310,8 @@ __python__create_venv__() {
 
     log_info "creating venv in $path"
     "$py" -m venv "$path" || return 1
+
+    remove_from_cache python "$path/.."
 
     log_debug "created venv"
 
@@ -324,10 +326,14 @@ __python__install_dependencies__() {
 
   local write_requirements=$1
 
-  local before
-  before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
-
   if [ -f requirements.txt ]; then
+
+    if is_fresh python requirements.txt; then
+      return 0
+    fi
+
+    local before
+    before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
 
     local stored
     stored=$(__python__normalize_dependencies__ <requirements.txt) || return 1
@@ -340,7 +346,14 @@ __python__install_dependencies__() {
 
     fi
 
+    add_to_cache python requirements.txt
+
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
+
+    local before
+    before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
+
+    # todo: cache not supported yet
 
     __python__handle_install_dependencies__ project \
       --editable ".[dev]" \

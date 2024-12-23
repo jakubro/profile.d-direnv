@@ -184,30 +184,47 @@ __node__install_node__() {
 
 __node__install_dependencies__() {
 
-  if [ -f yarn.lock ]; then
+  if [ ! -d node_modules ]; then
+      remove_from_cache node .
+  fi
 
-    if ! has yarn; then
-      __node__npm_install__ --global yarn || return 1
+  if [ -f package-lock.json ]; then
+
+    if is_fresh node package-lock.json; then
+      return 0
     fi
 
-    __node__handle_install_dependencies__ yarn \
-      __node__yarn_install__ --pure-lockfile \
-      || return 1
-
-  elif [ -f package-lock.json ]; then
-
-    __node__handle_install_dependencies__ npm \
+    __node__handle_install_dependencies__ \
       __node__npm_install__ || return 1
 
-  elif [ -f package.json ]; then
+    add_to_cache node package-lock.json
+
+  else
+
+    if [ -f yarn.lock ]; then
+      if is_fresh node yarn.lock; then
+        return 0
+      fi
+    elif [ -f package.json ]; then
+      if is_fresh node package.json; then
+        return 0
+      fi
+    else
+      return 0
+    fi
 
     if ! has yarn; then
       __node__npm_install__ --global yarn || return 1
     fi
 
-    __node__handle_install_dependencies__ yarn \
-      __node__yarn_install__ \
-      || return 1
+    __node__handle_install_dependencies__ \
+      __node__yarn_install__ || return 1
+
+    if [ -f yarn.lock ]; then
+      add_to_cache node yarn.lock
+    elif [ -f package.json ]; then
+      add_to_cache node package.json
+    fi
 
   fi
 
@@ -215,20 +232,17 @@ __node__install_dependencies__() {
 
 __node__handle_install_dependencies__() {
 
-  local type=$1
-  shift
-
-  log_info "restoring $type dependencies"
+  log_info "restoring node.js dependencies"
 
   "$@"
   local code=$?
 
   if [ "$code" != 0 ]; then
-    log_error "failed to restore $type dependencies"
+    log_error "failed to restore node.js dependencies"
     return 1
   fi
 
-  log_debug "restored $type dependencies"
+  log_debug "restored node.js dependencies"
 
 }
 

@@ -1,0 +1,84 @@
+#!/bin/bash
+
+is_fresh() {
+
+  local type=$1
+
+  local live_path
+  local cache_path
+  local cache_hash
+  local live_hash
+  local date_now
+  local cache_mod
+
+  live_path=$(realpath "$2") || return 1
+  cache_path=$(__cache__get_path__ "$type" "$live_path") || return 1
+
+  live_hash=$(__cache__get_hash__ "$live_path") || return 1
+  cache_hash=$(__cache__get_hash__ "$cache_path") || return 1
+
+  date_now=$(date +%s) || return 1
+  cache_mod=$(__cache__get_last_modification_time__ "$cache_path") || return 1
+
+  if [ "$cache_hash" != "$live_hash" ]; then
+    return 1
+  fi
+
+  if [ "$((date_now - cache_mod))" -gt "$((7 * 24 * 60 * 60))" ]; then
+    return 1
+  fi
+
+  return 0
+
+}
+
+add_to_cache() {
+
+  local path
+  local dir
+
+  path=$(__cache__get_path__ "$1" "$2") || return 1
+  dir=$(dirname "$path") || return 1
+
+  mkdir -p "$dir" || return 1
+  __cache__get_hash__ "$2" >"$path" || return 1
+
+}
+
+remove_from_cache() {
+
+  local path
+  path=$(__cache__get_path__ "$1" "$2") || return 1
+
+  rm -rf "$path" >/dev/null
+
+}
+
+__cache__get_path__() {
+
+  local type=$1
+
+  local path
+  path=$(realpath "$2") || return 1
+  path=${path#/}
+  path=${path%/}
+
+  echo "${HOME}/.cache/profile.d/plugins/direnv/${type}/${path}"
+
+}
+
+__cache__get_hash__() {
+
+  if [[ $1 == "${HOME}/.cache/profile.d/plugins/direnv/"* ]]; then
+    cat "$1" 2>/dev/null
+  else
+    sha256sum <"$1"
+  fi
+
+}
+
+__cache__get_last_modification_time__() {
+
+  stat -c %Y "$1"
+
+}
