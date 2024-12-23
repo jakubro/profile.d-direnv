@@ -1,7 +1,7 @@
 #!/bin/bash
 # todo: depends on 01-colors from @jakubro/profile.d-jakub-dotfiles
 
-DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m")  # gray color
+DIRENV_LOG_FORMAT=$(printf "\033[90m%%s\033[0m") # gray color
 export DIRENV_LOG_FORMAT
 
 __PROFILE_D_DIRENV_LOG_LEVEL__=${__PROFILE_D_DIRENV_LOG_LEVEL__:-1}

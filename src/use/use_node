@@ -185,7 +185,7 @@ __node__install_node__() {
 __node__install_dependencies__() {
 
   if [ ! -d node_modules ]; then
-      remove_from_cache node .
+    remove_from_cache node .
   fi
 
   if [ -f package-lock.json ]; then
