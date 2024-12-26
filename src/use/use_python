@@ -1,5 +1,7 @@
 #!/bin/bash
 
+__PYTHON__DEPENDENCIES__=(requirements.txt pyproject.toml setup.py)
+
 # Usage: use python [<version>] [--root=<root>] [--upgrade-pip] [--write-requirements]
 #
 # Examples:
@@ -311,7 +313,7 @@ __python__create_venv__() {
     log_info "creating venv in $path"
     "$py" -m venv "$path" || return 1
 
-    remove_from_cache python "$path/.."
+    remove_from_cache "${__PYTHON__DEPENDENCIES__[@]}"
 
     log_debug "created venv"
 
@@ -326,11 +328,11 @@ __python__install_dependencies__() {
 
   local write_requirements=$1
 
-  if [ -f requirements.txt ]; then
+  if is_fresh "${__PYTHON__DEPENDENCIES__[@]}"; then
+    return 0
+  fi
 
-    if is_fresh python requirements.txt; then
-      return 0
-    fi
+  if [ -f requirements.txt ]; then
 
     local before
     before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
@@ -340,23 +342,19 @@ __python__install_dependencies__() {
 
     if [ "$before" != "$stored" ]; then
 
-      __python__handle_install_dependencies__ requirements.txt \
-        --requirement requirements.txt \
+      __python__handle_install_dependencies__ \
+        __python__pip_install__ --requirement requirements.txt \
         || return 1
 
     fi
-
-    add_to_cache python requirements.txt
 
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
 
     local before
     before=$(__python__pip_freeze__ | __python__normalize_dependencies__) || return 1
 
-    # todo: cache not supported yet
-
-    __python__handle_install_dependencies__ project \
-      --editable ".[dev]" \
+    __python__handle_install_dependencies__ \
+      __python__pip_install__ --editable ".[dev]" \
       || return 1
 
   fi
@@ -372,24 +370,23 @@ __python__install_dependencies__() {
 
   fi
 
+  add_to_cache "${__PYTHON__DEPENDENCIES__[@]}"
+
 }
 
 __python__handle_install_dependencies__() {
 
-  local type=$1
-  shift
+  log_info "restoring python dependencies"
 
-  log_info "restoring $type dependencies"
-
-  __python__pip_install__ "$@"
+  "$@"
   local code=$?
 
   if [ "$code" != 0 ]; then
-    log_error "failed to restore $type dependencies"
+    log_error "failed to restore python dependencies"
     return 1
   fi
 
-  log_debug "restored $type dependencies"
+  log_debug "restored python dependencies"
 
 }
 

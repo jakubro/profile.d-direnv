@@ -1,5 +1,7 @@
 #!/bin/bash
 
+__NODE__DEPENDENCIES__=(package.json package-lock.json yarn.lock)
+
 # Usage: use node [<version>] [--root=<root>]
 #
 # Examples:
@@ -185,33 +187,17 @@ __node__install_node__() {
 __node__install_dependencies__() {
 
   if [ ! -d node_modules ]; then
-    remove_from_cache node .
+    remove_from_cache "${__NODE__DEPENDENCIES__[@]}"
+  elif is_fresh "${__NODE__DEPENDENCIES__[@]}"; then
+    return 0
   fi
 
   if [ -f package-lock.json ]; then
 
-    if is_fresh node package-lock.json; then
-      return 0
-    fi
-
     __node__handle_install_dependencies__ \
       __node__npm_install__ || return 1
 
-    add_to_cache node package-lock.json
-
-  else
-
-    if [ -f yarn.lock ]; then
-      if is_fresh node yarn.lock; then
-        return 0
-      fi
-    elif [ -f package.json ]; then
-      if is_fresh node package.json; then
-        return 0
-      fi
-    else
-      return 0
-    fi
+  elif [ -f yarn.lock ] || [ -f package.json ]; then
 
     if ! has yarn; then
       __node__npm_install__ --global yarn || return 1
@@ -220,13 +206,9 @@ __node__install_dependencies__() {
     __node__handle_install_dependencies__ \
       __node__yarn_install__ || return 1
 
-    if [ -f yarn.lock ]; then
-      add_to_cache node yarn.lock
-    elif [ -f package.json ]; then
-      add_to_cache node package.json
-    fi
-
   fi
+
+  add_to_cache "${__NODE__DEPENDENCIES__[@]}"
 
 }
 
