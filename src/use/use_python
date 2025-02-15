@@ -343,7 +343,7 @@ __python__install_dependencies__() {
     if [ "$before" != "$stored" ]; then
 
       __python__handle_install_dependencies__ \
-        __python__pip_install__ --requirement requirements.txt \
+        __python__pip_install__ --no-deps --requirement requirements.txt \
         || return 1
 
     fi
